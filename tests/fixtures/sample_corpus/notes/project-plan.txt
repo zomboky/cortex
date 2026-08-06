@@ -1,0 +1,15 @@
+Plan de projet - Migration infrastructure 2024
+
+Objectif : remplacer le systeme de stockage vieillissant par une solution plus fiable
+et moins couteuse a maintenir.
+
+Budget alloue : 120 000 euros, valide en reunion d'equipe en janvier 2024.
+
+Etapes :
+1. Selection du fournisseur (decembre 2023, termine)
+2. Commande du materiel reseau (janvier 2024)
+3. Migration progressive des donnees (fevrier a avril 2024)
+4. Decommissionnement de l'ancien systeme (mai 2024)
+
+Le principal risque du projet est un retard de livraison du materiel reseau par le
+fournisseur choisi, deja evoque lors du point d'avancement de janvier.

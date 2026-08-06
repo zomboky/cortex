@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+/build/
+/dist/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Cortex runtime output / local config
+cortex-out/
+.env
+*.local
+
+# Claude Code / local tooling
+.claude/
+.token-optimizer/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
