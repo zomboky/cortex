@@ -26,7 +26,7 @@ $ cortex query "which notes talk about the infrastructure budget?"
 ## Requirements
 
 - Python 3.10+
-- An API key - [Anthropic](https://console.anthropic.com/) (default), or any OpenAI-compatible endpoint (local or cloud [Ollama](https://ollama.com), vLLM, LM Studio, ...)
+- An API key - [Anthropic](https://console.anthropic.com/) (default), or any OpenAI-compatible endpoint (local or cloud [Ollama](https://ollama.com), vLLM, LM Studio, ...) - **or**, with the `claude-cli` provider, a local [Claude Code](https://claude.com/claude-code) install authenticated to a Claude subscription, no API key needed (see Configuration below)
 - [`graphifyy`](https://pypi.org/project/graphifyy/) (installed automatically as a dependency)
 
 ## Installation
@@ -64,14 +64,52 @@ The script installs cortex globally with `uv tool install` (falling back to `pip
 
 Cortex and Graphify have completely independent LLM configuration - Graphify only ever reads `GEMINI_API_KEY`/`GOOGLE_API_KEY`, never the variables below.
 
-- `CORTEX_PROVIDER` - `anthropic` (default) or `openai-compatible`
-- `CORTEX_API_KEY` - your API key (falls back to `ANTHROPIC_API_KEY` when provider is `anthropic`)
+- `CORTEX_PROVIDER` - `anthropic` (default), `claude-cli`, or `openai-compatible`
+- `CORTEX_API_KEY` - your API key (falls back to `ANTHROPIC_API_KEY` when provider is `anthropic`; unused/not required for `claude-cli`)
 - `CORTEX_BASE_URL` - endpoint URL for `openai-compatible` (local or cloud Ollama, vLLM, ...)
 - `CORTEX_MODEL` - default model for both stages
-- `CORTEX_TRIAGE_MODEL` / `CORTEX_VAULT_MODEL` - override the model per stage (defaults: a cheap model for triage, a stronger one for vault generation, on Anthropic; required explicitly on `openai-compatible` since model names aren't standardized)
+- `CORTEX_TRIAGE_MODEL` / `CORTEX_VAULT_MODEL` - override the model per stage (defaults: a cheap model for triage, a stronger one for vault generation, on Anthropic and claude-cli; required explicitly on `openai-compatible` since model names aren't standardized)
 - `CORTEX_BATCH_SIZE` - files per triage LLM call (default 15)
 
 Optional config file instead of env vars: `~/.config/cortex/config.toml` (`%APPDATA%\cortex\config.toml` on Windows). Run `cortex config init` to generate a starter file, and `cortex config show` to see the resolved configuration (the API key is never printed, only whether it's set).
+
+### `claude-cli` provider (use your Claude subscription, no API key)
+
+Instead of hitting the Anthropic API directly with a billed API key, `CORTEX_PROVIDER=claude-cli`
+shells out to a local [Claude Code](https://claude.com/claude-code) install (`claude -p ...`) for
+every LLM call. Claude Code's own auth (an OAuth session tied to a Claude subscription) is reused
+as-is, so usage counts against that subscription instead of separate pay-per-token API credits.
+
+Requirements:
+- `claude` must be on `PATH` and already authenticated (`claude auth login`, or any working
+  Claude Code session) on the machine running cortex.
+- No `CORTEX_API_KEY`/`ANTHROPIC_API_KEY` needed.
+
+```powershell
+$env:CORTEX_PROVIDER = "claude-cli"
+$env:CORTEX_MODEL = "claude-sonnet-5"   # same model names as the anthropic provider
+```
+
+Trade-offs versus the `anthropic` provider: each LLM call spawns a `claude -p` subprocess (higher
+per-call latency than a direct API request), and throughput is bound by whatever session/rate
+limits apply to the underlying subscription rather than API rate limits.
+
+## Staying up to date
+
+Cortex isn't published on PyPI: every install (`uv tool`, `pipx`, `pip --user`, or an editable
+`pip install -e .` clone) resolves `git+https://github.com/zomboky/cortex.git` at install time, so
+there's no PyPI-style version number to track -- the latest commit on `main` **is** the latest
+version.
+
+Every `cortex` invocation checks (at most once every 24h, cached) whether `main` has moved past the
+commit it was installed from, and applies the update automatically if so -- via `git pull --ff-only`
+for an editable dev install (skipped if that checkout has uncommitted local changes, to avoid
+clobbering work in progress), or by re-running the same `uv tool install` / `pipx install` / `pip
+install --user` used originally otherwise. The update takes effect on the *next* invocation, not the
+one that detected it.
+
+Run `cortex update` to check and update immediately (bypassing the 24h cache). Set
+`CORTEX_SKIP_UPDATE_CHECK=1` to disable the check entirely (no network call at all).
 
 ## Customizing
 

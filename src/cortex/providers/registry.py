@@ -3,6 +3,7 @@ from __future__ import annotations
 from ..config import CortexConfig
 from .anthropic_provider import AnthropicProvider
 from .base import LLMProvider
+from .claude_cli_provider import ClaudeCLIProvider
 from .openai_compatible import OpenAICompatibleProvider
 
 
@@ -27,6 +28,8 @@ def _build(config: CortexConfig, model: str | None) -> LLMProvider:
         if not config.api_key:
             raise MissingAPIKeyError("Aucune cle API trouvee. Definis CORTEX_API_KEY ou ANTHROPIC_API_KEY.")
         return AnthropicProvider(api_key=config.api_key, model=model)
+    if config.provider == "claude-cli":
+        return ClaudeCLIProvider(model=model)
     if config.provider == "openai-compatible":
         return OpenAICompatibleProvider(api_key=config.api_key, base_url=config.base_url, model=model)
     raise ValueError(f"Provider inconnu : {config.provider}")

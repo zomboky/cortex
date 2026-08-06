@@ -93,8 +93,8 @@ def resolve_config(
 
     resolved_model = _pick(model, env, "CORTEX_MODEL", provider_section, "model", None)
 
-    default_triage = DEFAULT_TRIAGE_MODEL if resolved_provider == "anthropic" else None
-    default_vault = DEFAULT_VAULT_MODEL if resolved_provider == "anthropic" else None
+    default_triage = DEFAULT_TRIAGE_MODEL if resolved_provider in ("anthropic", "claude-cli") else None
+    default_vault = DEFAULT_VAULT_MODEL if resolved_provider in ("anthropic", "claude-cli") else None
 
     resolved_triage_model = _pick(
         triage_model, env, "CORTEX_TRIAGE_MODEL", provider_section, "triage_model",
@@ -134,8 +134,8 @@ STARTER_CONFIG_TOML = """\
 # (les flags CLI et les variables d'env priment sur ce fichier).
 
 [provider]
-# name = "anthropic"              # ou "openai-compatible"
-# api_key = "sk-..."              # prefere une variable d'env plutot que ce fichier en clair
+# name = "anthropic"              # ou "claude-cli" (abonnement Claude Code local, sans cle API) ou "openai-compatible"
+# api_key = "sk-..."              # prefere une variable d'env plutot que ce fichier en clair ; inutile avec claude-cli
 # base_url = "http://localhost:11434/v1"   # pour openai-compatible (Ollama local ou cloud)
 # model = "llama3.1:70b"          # requis pour openai-compatible (pas de defaut devine)
 # triage_model = "claude-haiku-4-5"
