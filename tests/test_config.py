@@ -75,3 +75,35 @@ def test_openai_compatible_with_explicit_model_succeeds(tmp_path: Path) -> None:
     config = resolve_config(env=env, config_path=tmp_path / "missing.toml")
     assert config.triage_model == "llama3.1:70b"
     assert config.vault_model == "llama3.1:70b"
+
+
+def test_effort_defaults_to_none(tmp_path: Path) -> None:
+    config = resolve_config(env={}, config_path=tmp_path / "missing.toml")
+    assert config.triage_effort is None
+    assert config.vault_effort is None
+
+
+def test_global_effort_applies_to_both_stages(tmp_path: Path) -> None:
+    config = resolve_config(effort="medium", env={}, config_path=tmp_path / "missing.toml")
+    assert config.triage_effort == "medium"
+    assert config.vault_effort == "medium"
+
+
+def test_stage_effort_overrides_global_effort(tmp_path: Path) -> None:
+    config = resolve_config(
+        effort="medium", triage_effort="low", vault_effort="xhigh", env={}, config_path=tmp_path / "missing.toml"
+    )
+    assert config.triage_effort == "low"
+    assert config.vault_effort == "xhigh"
+
+
+def test_effort_env_vars(tmp_path: Path) -> None:
+    env = {"CORTEX_TRIAGE_EFFORT": "low", "CORTEX_VAULT_EFFORT": "max"}
+    config = resolve_config(env=env, config_path=tmp_path / "missing.toml")
+    assert config.triage_effort == "low"
+    assert config.vault_effort == "max"
+
+
+def test_invalid_effort_raises(tmp_path: Path) -> None:
+    with pytest.raises(ValueError):
+        resolve_config(effort="ludicrous", env={}, config_path=tmp_path / "missing.toml")

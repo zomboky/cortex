@@ -44,6 +44,7 @@ def build(
     *,
     dry_run: bool = False,
     skip_graphify: bool = False,
+    exclude: list[str] | None = None,
     on_progress: Callable[[str], None] | None = None,
     on_note_progress: Callable[[int, int, int], None] | None = None,
 ) -> BuildResult:
@@ -62,7 +63,7 @@ def build(
     except MissingAPIKeyError:
         triage_provider = None
         report("No LLM provider configured (missing API key) -- ambiguous files will be kept by default.")
-    decisions = triage_pipeline.run(source, triage_provider, batch_size=config.batch_size, cache=cache)
+    decisions = triage_pipeline.run(source, triage_provider, batch_size=config.batch_size, cache=cache, exclude=exclude)
     kept = [d for d in decisions if d.decision == "keep"]
     dropped = len(decisions) - len(kept)
     report(f"Triage: {len(decisions)} fichiers -> {len(kept)} conserves, {dropped} ecartes")

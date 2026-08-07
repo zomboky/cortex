@@ -56,3 +56,27 @@ def test_complete_without_system_omits_the_kwarg(monkeypatch) -> None:
 
     call = provider._client.messages.calls[0]
     assert "system" not in call
+
+
+def test_effort_is_passed_as_output_config(monkeypatch) -> None:
+    import anthropic
+
+    monkeypatch.setattr(anthropic, "Anthropic", _FakeAnthropicClient)
+
+    provider = AnthropicProvider(api_key="sk-test", model="claude-sonnet-5", effort="xhigh")
+    provider.complete("Bonjour")
+
+    call = provider._client.messages.calls[0]
+    assert call["output_config"] == {"effort": "xhigh"}
+
+
+def test_no_effort_omits_output_config(monkeypatch) -> None:
+    import anthropic
+
+    monkeypatch.setattr(anthropic, "Anthropic", _FakeAnthropicClient)
+
+    provider = AnthropicProvider(api_key="sk-test", model="claude-sonnet-5")
+    provider.complete("Bonjour")
+
+    call = provider._client.messages.calls[0]
+    assert "output_config" not in call

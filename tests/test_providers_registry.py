@@ -54,3 +54,25 @@ def test_unknown_provider_raises_plain_value_error_not_missing_key() -> None:
     config = CortexConfig(provider="mystery", api_key="sk-test")
     with pytest.raises(ValueError):
         get_triage_provider(config)
+
+
+def test_triage_provider_gets_triage_effort(monkeypatch) -> None:
+    import anthropic
+
+    monkeypatch.setattr(anthropic, "Anthropic", _FakeClient)
+    config = CortexConfig(provider="anthropic", api_key="sk-test", triage_effort="low", vault_effort="xhigh")
+
+    provider = get_triage_provider(config)
+
+    assert provider.effort == "low"
+
+
+def test_vault_provider_gets_vault_effort(monkeypatch) -> None:
+    import anthropic
+
+    monkeypatch.setattr(anthropic, "Anthropic", _FakeClient)
+    config = CortexConfig(provider="anthropic", api_key="sk-test", triage_effort="low", vault_effort="xhigh")
+
+    provider = get_vault_provider(config)
+
+    assert provider.effort == "xhigh"

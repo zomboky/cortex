@@ -23,6 +23,11 @@ DEFAULT_TRIAGE_MODEL = "claude-haiku-4-5"
 DEFAULT_VAULT_MODEL = "claude-sonnet-5"
 DEFAULT_BATCH_SIZE = 15
 
+# Niveaux d'effort de raisonnement Claude (parametre output_config.effort de l'API
+# Messages Anthropic). Ignore par les providers claude-cli et openai-compatible --
+# specifique a l'API Anthropic directe.
+VALID_EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
+
 
 @dataclass(frozen=True)
 class CortexConfig:
@@ -31,6 +36,8 @@ class CortexConfig:
     base_url: str | None = None
     triage_model: str | None = DEFAULT_TRIAGE_MODEL
     vault_model: str | None = DEFAULT_VAULT_MODEL
+    triage_effort: str | None = None
+    vault_effort: str | None = None
     batch_size: int = DEFAULT_BATCH_SIZE
 
     def has_api_key(self) -> bool:
@@ -70,6 +77,9 @@ def resolve_config(
     model: str | None = None,
     triage_model: str | None = None,
     vault_model: str | None = None,
+    effort: str | None = None,
+    triage_effort: str | None = None,
+    vault_effort: str | None = None,
     base_url: str | None = None,
     batch_size: int | None = None,
     env: dict[str, str] | None = None,
@@ -105,6 +115,19 @@ def resolve_config(
         resolved_model or default_vault,
     )
 
+    resolved_effort = _pick(effort, env, "CORTEX_EFFORT", provider_section, "effort", None)
+    resolved_triage_effort = _pick(
+        triage_effort, env, "CORTEX_TRIAGE_EFFORT", provider_section, "triage_effort", resolved_effort
+    )
+    resolved_vault_effort = _pick(
+        vault_effort, env, "CORTEX_VAULT_EFFORT", provider_section, "vault_effort", resolved_effort
+    )
+    for label, value in (("triage_effort", resolved_triage_effort), ("vault_effort", resolved_vault_effort)):
+        if value is not None and value not in VALID_EFFORT_LEVELS:
+            raise ValueError(
+                f"{label} invalide : {value!r}. Valeurs acceptees : {', '.join(VALID_EFFORT_LEVELS)}."
+            )
+
     resolved_batch_size = int(_pick(batch_size, env, "CORTEX_BATCH_SIZE", provider_section, "batch_size", DEFAULT_BATCH_SIZE))
 
     if resolved_provider == "openai-compatible" and not resolved_triage_model:
@@ -123,6 +146,8 @@ def resolve_config(
         base_url=resolved_base_url,
         triage_model=resolved_triage_model,
         vault_model=resolved_vault_model,
+        triage_effort=resolved_triage_effort,
+        vault_effort=resolved_vault_effort,
         batch_size=resolved_batch_size,
     )
 
@@ -130,7 +155,8 @@ def resolve_config(
 STARTER_CONFIG_TOML = """\
 # Configuration de cortex. Voir aussi les variables d'environnement
 # CORTEX_PROVIDER, CORTEX_API_KEY, CORTEX_BASE_URL, CORTEX_MODEL,
-# CORTEX_TRIAGE_MODEL, CORTEX_VAULT_MODEL, CORTEX_BATCH_SIZE
+# CORTEX_TRIAGE_MODEL, CORTEX_VAULT_MODEL, CORTEX_EFFORT, CORTEX_TRIAGE_EFFORT,
+# CORTEX_VAULT_EFFORT, CORTEX_BATCH_SIZE
 # (les flags CLI et les variables d'env priment sur ce fichier).
 
 [provider]
@@ -140,6 +166,9 @@ STARTER_CONFIG_TOML = """\
 # model = "llama3.1:70b"          # requis pour openai-compatible (pas de defaut devine)
 # triage_model = "claude-haiku-4-5"
 # vault_model = "claude-sonnet-5"
+# effort = "medium"               # low | medium | high | xhigh | max -- effort des DEUX etapes, provider anthropic seulement
+# triage_effort = "low"           # surcharge effort pour le triage seul
+# vault_effort = "high"           # surcharge effort pour la generation du vault seule
 # batch_size = 15
 """
 

@@ -69,6 +69,7 @@ Cortex and Graphify have completely independent LLM configuration - Graphify onl
 - `CORTEX_BASE_URL` - endpoint URL for `openai-compatible` (local or cloud Ollama, vLLM, ...)
 - `CORTEX_MODEL` - default model for both stages
 - `CORTEX_TRIAGE_MODEL` / `CORTEX_VAULT_MODEL` - override the model per stage (defaults: a cheap model for triage, a stronger one for vault generation, on Anthropic and claude-cli; required explicitly on `openai-compatible` since model names aren't standardized)
+- `CORTEX_EFFORT` / `CORTEX_TRIAGE_EFFORT` / `CORTEX_VAULT_EFFORT` - Claude reasoning effort (`low`/`medium`/`high`/`xhigh`/`max`, maps to the Messages API `output_config.effort`), globally or per stage; `anthropic` provider only, silently ignored by `claude-cli`/`openai-compatible`. No default - omitted means the API's own default (`high`).
 - `CORTEX_BATCH_SIZE` - files per triage LLM call (default 15)
 
 Optional config file instead of env vars: `~/.config/cortex/config.toml` (`%APPDATA%\cortex\config.toml` on Windows). Run `cortex config init` to generate a starter file, and `cortex config show` to see the resolved configuration (the API key is never printed, only whether it's set).
@@ -124,11 +125,46 @@ the linking pass and the Graphify rebuild are skipped too -- both also cost LLM 
 semantic extraction included). `.cortex/` is specific to one `--output` directory; delete it to force
 a full rebuild from scratch.
 
+## Excluding paths
+
+`--exclude` (repeatable) on `build`/`vault`/`triage` drops a path from the scan before triage even
+runs - no heuristic, no LLM call, not even a hash computed. A value matches either an exact path
+component anywhere under the source folder (`--exclude data` drops the whole `data/` subtree,
+wherever it sits) or a glob against the relative path or filename (`--exclude "*.csv"`,
+`--exclude "secrets/*.json"`). Repeat the flag for multiple patterns:
+
+```
+cortex build . --exclude data --exclude google-earth-engine-api-key --exclude "*.csv"
+```
+
+Use this for anything that shouldn't be read by the LLM at all - credentials, service account
+keys, large raw datasets that aren't "knowledge" in the vault sense. Cortex has no `.gitignore`
+awareness, so a secrets folder that's merely `.gitignore`d is **not** excluded by default; pass
+`--exclude` explicitly.
+
+## Reasoning effort
+
+`--effort` (and the more specific `--triage-effort` / `--vault-effort`) sets the Claude reasoning
+effort level - `low`, `medium`, `high`, `xhigh`, or `max` - independently for the triage pass and
+the vault-generation pass:
+
+```
+cortex build . --triage-effort low --vault-effort xhigh
+```
+
+Lower effort on triage (a cheap yes/no per file) and higher effort on vault generation (the note
+that actually gets written) is a reasonable default split. `anthropic` provider only - `effort` is
+accepted by `claude-cli`/`openai-compatible` for a uniform provider signature but has no effect
+there (`claude -p` exposes no equivalent control; it isn't a standard field on
+`/v1/chat/completions`).
+
 ## Customizing
 
 - Triage thresholds (size ceilings, entropy bands used to catch noise like an oversized low-information data dump): [`src/cortex/triage/heuristics.py`](src/cortex/triage/heuristics.py)
 - Vault-generation and linking prompts: [`src/cortex/vault/generator.py`](src/cortex/vault/generator.py)
 - Triage batch size: `--batch-size` flag or `CORTEX_BATCH_SIZE`
+- Excluded paths: `--exclude` flag (repeatable)
+- Reasoning effort: `--effort` / `--triage-effort` / `--vault-effort` flags
 
 ## Uninstalling
 
@@ -137,6 +173,14 @@ uv tool uninstall cortex   # or: pipx uninstall cortex
 ```
 
 Remove `~/.config/cortex/config.toml` (or `%APPDATA%\cortex\config.toml`) if you created one.
+
+## Versioning
+
+`cortex --version` reports a semantic version (`MAJOR.MINOR.PATCH`) documented in
+[`CHANGELOG.md`](CHANGELOG.md). This is independent from the update mechanism above - since cortex
+isn't on PyPI, `cortex update` always tracks the latest commit on `main` regardless of the version
+number. The version number exists to communicate the size of a change (see `CHANGELOG.md` for the
+exact policy), not to gate installation.
 
 ## License
 

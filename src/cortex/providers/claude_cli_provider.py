@@ -16,7 +16,10 @@ class ClaudeCLIProvider(LLMProvider):
     authentifiee via l'abonnement Claude connecte (OAuth) plutot qu'une cle API facturee
     a l'usage. Necessite `claude` dans le PATH et une session deja authentifiee."""
 
-    def __init__(self, model: str) -> None:
+    def __init__(self, model: str, effort: str | None = None) -> None:
+        # effort accepte pour une signature uniforme entre providers, mais ignore ici :
+        # `claude -p` n'expose pas de controle d'effort de raisonnement equivalent a
+        # output_config.effort de l'API Anthropic directe.
         self.model = model
         self._cli = shutil.which("claude")
         if not self._cli:

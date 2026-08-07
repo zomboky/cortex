@@ -30,8 +30,17 @@ ProviderOpt = typer.Option(None, "--provider", help="anthropic (defaut), claude-
 ModelOpt = typer.Option(None, "--model", help="Modele pour le triage ET la generation du vault.")
 TriageModelOpt = typer.Option(None, "--triage-model", help="Modele utilise pour le triage (defaut : economique).")
 VaultModelOpt = typer.Option(None, "--vault-model", help="Modele utilise pour la generation du vault (defaut : qualite).")
+EffortOpt = typer.Option(
+    None, "--effort", help="Effort de raisonnement Claude (low/medium/high/xhigh/max) pour le triage ET le vault. Provider anthropic seulement."
+)
+TriageEffortOpt = typer.Option(None, "--triage-effort", help="Surcharge --effort pour le triage seul.")
+VaultEffortOpt = typer.Option(None, "--vault-effort", help="Surcharge --effort pour la generation du vault seule.")
 BaseUrlOpt = typer.Option(None, "--base-url", help="URL de l'endpoint compatible OpenAI (Ollama local ou cloud).")
 BatchSizeOpt = typer.Option(None, "--batch-size", help="Taille des lots pour les appels LLM du triage.")
+ExcludeOpt = typer.Option(
+    None, "--exclude",
+    help="Nom de fichier/dossier ou motif glob a exclure du scan (ex. --exclude data --exclude \"*.csv\"). Repetable.",
+)
 
 
 def _version_callback(value: bool) -> None:
@@ -77,6 +86,9 @@ def _build_config(
     vault_model: Optional[str],
     base_url: Optional[str],
     batch_size: Optional[int],
+    effort: Optional[str] = None,
+    triage_effort: Optional[str] = None,
+    vault_effort: Optional[str] = None,
 ) -> CortexConfig:
     try:
         return resolve_config(
@@ -84,6 +96,9 @@ def _build_config(
             model=model,
             triage_model=triage_model,
             vault_model=vault_model,
+            effort=effort,
+            triage_effort=triage_effort,
+            vault_effort=vault_effort,
             base_url=base_url,
             batch_size=batch_size,
         )
@@ -133,13 +148,20 @@ def build(
     model: Optional[str] = ModelOpt,
     triage_model: Optional[str] = TriageModelOpt,
     vault_model: Optional[str] = VaultModelOpt,
+    effort: Optional[str] = EffortOpt,
+    triage_effort: Optional[str] = TriageEffortOpt,
+    vault_effort: Optional[str] = VaultEffortOpt,
     base_url: Optional[str] = BaseUrlOpt,
     batch_size: Optional[int] = BatchSizeOpt,
+    exclude: Optional[list[str]] = ExcludeOpt,
     dry_run: bool = typer.Option(False, "--dry-run", help="Triage seul, n'ecrit ni vault ni graphe."),
     skip_graphify: bool = typer.Option(False, "--skip-graphify", help="Genere le vault mais ne lance pas graphify."),
 ) -> None:
     """Pipeline complet : triage -> vault -> graphify."""
-    config = _build_config(provider, model, triage_model, vault_model, base_url, batch_size)
+    config = _build_config(
+        provider, model, triage_model, vault_model, base_url, batch_size,
+        effort=effort, triage_effort=triage_effort, vault_effort=vault_effort,
+    )
     on_note_progress, stop_progress = _note_progress_reporter(console)
     try:
         result = pipeline_module.build(
@@ -148,6 +170,7 @@ def build(
             config,
             dry_run=dry_run,
             skip_graphify=skip_graphify,
+            exclude=exclude,
             on_progress=console.print,
             on_note_progress=on_note_progress,
         )
@@ -174,18 +197,25 @@ def triage(
     model: Optional[str] = ModelOpt,
     triage_model: Optional[str] = TriageModelOpt,
     vault_model: Optional[str] = VaultModelOpt,
+    effort: Optional[str] = EffortOpt,
+    triage_effort: Optional[str] = TriageEffortOpt,
+    vault_effort: Optional[str] = VaultEffortOpt,
     base_url: Optional[str] = BaseUrlOpt,
     batch_size: Optional[int] = BatchSizeOpt,
+    exclude: Optional[list[str]] = ExcludeOpt,
     as_json: bool = typer.Option(False, "--json", help="Sortie JSON plutot qu'un rapport lisible."),
 ) -> None:
     """Etape de tri seule : garder/ecarter chaque fichier, avec la raison."""
-    config = _build_config(provider, model, triage_model, vault_model, base_url, batch_size)
+    config = _build_config(
+        provider, model, triage_model, vault_model, base_url, batch_size,
+        effort=effort, triage_effort=triage_effort, vault_effort=vault_effort,
+    )
     try:
         llm_provider = get_triage_provider(config)
     except MissingAPIKeyError:
         llm_provider = None
         console.print("No LLM provider configured (missing API key) -- ambiguous files will be kept by default.")
-    decisions = triage_pipeline.run(path, llm_provider, batch_size=config.batch_size)
+    decisions = triage_pipeline.run(path, llm_provider, batch_size=config.batch_size, exclude=exclude)
 
     if as_json:
         console.print_json(json.dumps([d.to_dict() for d in decisions], ensure_ascii=False))
@@ -208,11 +238,18 @@ def vault(
     model: Optional[str] = ModelOpt,
     triage_model: Optional[str] = TriageModelOpt,
     vault_model: Optional[str] = VaultModelOpt,
+    effort: Optional[str] = EffortOpt,
+    triage_effort: Optional[str] = TriageEffortOpt,
+    vault_effort: Optional[str] = VaultEffortOpt,
     base_url: Optional[str] = BaseUrlOpt,
     batch_size: Optional[int] = BatchSizeOpt,
+    exclude: Optional[list[str]] = ExcludeOpt,
 ) -> None:
     """Etape de generation du vault seule (triage + notes + liens, sans graphify)."""
-    config = _build_config(provider, model, triage_model, vault_model, base_url, batch_size)
+    config = _build_config(
+        provider, model, triage_model, vault_model, base_url, batch_size,
+        effort=effort, triage_effort=triage_effort, vault_effort=vault_effort,
+    )
     on_note_progress, stop_progress = _note_progress_reporter(console)
     try:
         result = pipeline_module.build(
@@ -221,6 +258,7 @@ def vault(
             config,
             dry_run=False,
             skip_graphify=True,
+            exclude=exclude,
             on_progress=console.print,
             on_note_progress=on_note_progress,
         )
@@ -299,16 +337,24 @@ def config_show(
     model: Optional[str] = ModelOpt,
     triage_model: Optional[str] = TriageModelOpt,
     vault_model: Optional[str] = VaultModelOpt,
+    effort: Optional[str] = EffortOpt,
+    triage_effort: Optional[str] = TriageEffortOpt,
+    vault_effort: Optional[str] = VaultEffortOpt,
     base_url: Optional[str] = BaseUrlOpt,
     batch_size: Optional[int] = BatchSizeOpt,
 ) -> None:
     """Affiche la configuration resolue (jamais la cle API en clair)."""
-    config = _build_config(provider, model, triage_model, vault_model, base_url, batch_size)
+    config = _build_config(
+        provider, model, triage_model, vault_model, base_url, batch_size,
+        effort=effort, triage_effort=triage_effort, vault_effort=vault_effort,
+    )
     console.print(f"provider      = {config.provider}")
     console.print(f"api_key       = {'definie' if config.has_api_key() else 'absente'}")
     console.print(f"base_url      = {config.base_url or '(non definie)'}")
     console.print(f"triage_model  = {config.triage_model or '(non definie)'}")
     console.print(f"vault_model   = {config.vault_model or '(non definie)'}")
+    console.print(f"triage_effort = {config.triage_effort or '(defaut API)'}")
+    console.print(f"vault_effort  = {config.vault_effort or '(defaut API)'}")
     console.print(f"batch_size    = {config.batch_size}")
     console.print(f"config file   = {config_file_path()}")
 
