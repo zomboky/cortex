@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from ..cache import ProjectCache, hash_file
 from ..providers.base import LLMProvider
 from . import heuristics
 from .heuristics import Verdict
@@ -39,15 +40,16 @@ def run(
     provider: LLMProvider | None,
     *,
     batch_size: int = DEFAULT_BATCH_SIZE,
+    cache: ProjectCache | None = None,
 ) -> list[TriageDecision]:
+    """`cache`, si fourni, evite de rappeler le LLM pour un fichier ambigu deja juge
+    lors d'un run precedent et dont le contenu n'a pas change depuis (meme hash)."""
     decisions: list[TriageDecision] = []
     ambiguous: list[Path] = []
 
     for f in iter_files(root):
         result = heuristics.classify_file(f)
-        if result.verdict == Verdict.AMBIGUOUS:
-            ambiguous.append(f)
-        else:
+        if result.verdict != Verdict.AMBIGUOUS:
             decisions.append(
                 TriageDecision(
                     path=f,
@@ -56,6 +58,15 @@ def run(
                     source="heuristic",
                 )
             )
+            continue
+
+        cached = cache.cached_triage_decision(f) if cache else None
+        if cached is not None:
+            decisions.append(
+                TriageDecision(f, cached["decision"], f"{cached['reason']} (cache : fichier inchange)", "llm")
+            )
+        else:
+            ambiguous.append(f)
 
     if not ambiguous:
         return decisions
@@ -73,8 +84,13 @@ def run(
         for f in batch:
             verdict = verdicts_by_path.get(str(f))
             if verdict is None:
-                decisions.append(TriageDecision(f, "keep", "verdict LLM absent -- conserve par defaut", "llm"))
+                decision = TriageDecision(f, "keep", "verdict LLM absent -- conserve par defaut", "llm")
             else:
-                decisions.append(TriageDecision(f, verdict.decision, verdict.reason, "llm"))
+                decision = TriageDecision(f, verdict.decision, verdict.reason, "llm")
+            decisions.append(decision)
+            if cache is not None:
+                cache.record_triage_decision(
+                    f, hash_file(f), decision=decision.decision, reason=decision.reason, source=decision.source
+                )
 
     return decisions

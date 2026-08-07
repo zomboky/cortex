@@ -102,14 +102,27 @@ there's no PyPI-style version number to track -- the latest commit on `main` **i
 version.
 
 Every `cortex` invocation checks (at most once every 24h, cached) whether `main` has moved past the
-commit it was installed from, and applies the update automatically if so -- via `git pull --ff-only`
-for an editable dev install (skipped if that checkout has uncommitted local changes, to avoid
-clobbering work in progress), or by re-running the same `uv tool install` / `pipx install` / `pip
-install --user` used originally otherwise. The update takes effect on the *next* invocation, not the
-one that detected it.
+commit it was installed from, and prints a notice if so. It never applies the update automatically:
+doing so would mean the running process replaces its own venv/executable while it's still executing
+them, which reliably fails on Windows (the interpreter locks its own files) and can leave the
+install half-removed.
 
-Run `cortex update` to check and update immediately (bypassing the 24h cache). Set
-`CORTEX_SKIP_UPDATE_CHECK=1` to disable the check entirely (no network call at all).
+Run `cortex update` to actually apply it (whenever no `cortex` process is running) -- via `git pull
+--ff-only` for an editable dev install (skipped if that checkout has uncommitted local changes, to
+avoid clobbering work in progress), or by re-running the same `uv tool install` / `pipx install` /
+`pip install --user` used originally otherwise. Set `CORTEX_SKIP_UPDATE_CHECK=1` to disable the check
+entirely (no network call at all).
+
+## Incremental caching
+
+Re-running `cortex build`/`vault` on a folder you've already processed does not re-triage or
+re-generate everything from scratch. Each file's content hash is tracked in `<output>/.cortex/`
+(`triage-cache.json`, `vault-cache.json`, `graphify-cache.json`); a file whose hash hasn't changed
+since the last run reuses its previous triage decision and note instead of calling the LLM again. A
+file modified since the last run (different hash) is treated as new. If nothing in the vault changed,
+the linking pass and the Graphify rebuild are skipped too -- both also cost LLM tokens (Graphify's own
+semantic extraction included). `.cortex/` is specific to one `--output` directory; delete it to force
+a full rebuild from scratch.
 
 ## Customizing
 

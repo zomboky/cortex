@@ -8,10 +8,13 @@ semantique de Graphify les classe EXTRACTED plutot que INFERRED."""
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from ..providers.base import LLMProvider
 from .notes import Note
+
+_LIENS_SECTION = re.compile(r"\n\n## Liens\n.*\Z", re.DOTALL)
 
 NOTE_SYSTEM_PROMPT = (
     "Tu es un assistant qui transforme un fichier source en une note de style "
@@ -95,10 +98,14 @@ def propose_links(provider: LLMProvider, notes: list[Note]) -> dict[str, list[st
 
 
 def apply_links(notes: list[Note], links_by_title: dict[str, list[str]]) -> None:
-    """Insere les phrases de liaison proposees sous une section '## Liens' de chaque note, en place."""
+    """Insere les phrases de liaison proposees sous une section '## Liens' de chaque
+    note, en place. Idempotent : une section '## Liens' preexistante (note reutilisee
+    telle quelle depuis le cache d'un build precedent) est remplacee, jamais dupliquee."""
     for note in notes:
         sentences = links_by_title.get(note.title)
+        base_body = _LIENS_SECTION.sub("", note.body.rstrip())
         if not sentences:
+            note.body = base_body
             continue
         links_section = "\n".join(f"- {s}" for s in sentences)
-        note.body = f"{note.body.rstrip()}\n\n## Liens\n{links_section}\n"
+        note.body = f"{base_body}\n\n## Liens\n{links_section}\n"

@@ -19,7 +19,7 @@ from pathlib import Path
 
 NOISE_DIR_NAMES = {
     "node_modules", ".git", "__pycache__", "dist", "build",
-    ".venv", "venv", ".token-optimizer", "graphify-out", "cortex-out",
+    ".venv", "venv", ".token-optimizer", "graphify-out", "cortex-out", ".cortex",
 }
 NOISE_FILENAMES = {"package-lock.json", "yarn.lock", "poetry.lock", "Cargo.lock", "uv.lock"}
 
