@@ -41,20 +41,22 @@ def _version_callback(value: bool) -> None:
 
 
 def _maybe_auto_update() -> None:
-    """Verifie (avec cache 24h) si un nouveau commit existe sur main, et l'applique
-    automatiquement si oui. Ne fait jamais planter cortex : toute erreur reseau/git est
-    juste rapportee, la commande demandee par l'utilisateur continue normalement --
-    la mise a jour prend effet a la prochaine invocation."""
+    """Verifie (avec cache 24h) si un nouveau commit existe sur main, et le signale.
+    N'applique jamais la mise a jour automatiquement : `apply_update` reinstalle le
+    venv courant via `uv tool install --force` / equivalent, ce qui remplace les
+    fichiers (dont l'interpreteur) du processus cortex en train de tourner. Sur
+    Windows ce remplacement echoue systematiquement ("Access is denied", fichier
+    verrouille par le processus courant) et peut laisser l'installation dans un etat
+    casse (ex: Lib/site-packages supprime avant l'echec). On se contente donc de
+    notifier ; la mise a jour reelle se fait via `cortex update`, execute hors de
+    tout processus cortex en cours."""
     latest = update_module.check_for_update()
     if not latest:
         return
-    console.print(f"[yellow]Mise à jour cortex disponible ({latest[:7]}), application...[/yellow]")
-    installed = update_module.get_installed_info()
-    ok, message = update_module.apply_update(installed)
-    style = "green" if ok else "red"
-    console.print(f"[{style}]{message}[/{style}]")
-    if ok:
-        console.print("[yellow]Relance la commande pour utiliser la nouvelle version.[/yellow]")
+    console.print(
+        f"[yellow]Mise à jour cortex disponible ({latest[:7]}). "
+        "Lance `cortex update` pour l'appliquer.[/yellow]"
+    )
 
 
 @app.callback()
