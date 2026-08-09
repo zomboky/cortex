@@ -18,6 +18,24 @@ tenu en phase avec `pyproject.toml`) est independante du mecanisme de mise a jou
 date ». Le numero de version documente ici sert a communiquer l'ampleur d'un
 changement, pas a piloter l'installation.
 
+## [1.1.0] - 2026-08-09
+
+### Corrige
+- `cortex build`/`vault` : le cache disque (`.cortex/triage-cache.json`,
+  `vault-cache.json`) n'etait ecrit qu'une seule fois, tout a la fin d'un run
+  entierement reussi. Si le pipeline levait une exception en cours de route (ex. le
+  provider `claude-cli` qui epuise ses 4 tentatives apres avoir tape la limite
+  d'usage de l'abonnement Claude), tout le travail deja fait dans ce run -- notes deja
+  generees, decisions de triage deja rendues -- etait perdu : rien n'atteignait le
+  disque. Un `cortex build` relance repartait alors de zero et refaisait les memes
+  appels LLM deja payes, jusqu'a retomber sur la meme limite. `cache.save()` est
+  desormais dans un `finally` qui couvre tout le corps de `build()`, donc la
+  progression realisee avant un crash est toujours persistee et reutilisee au
+  prochain lancement.
+- `cortex build`/`vault` (CLI) : cette meme exception (`RuntimeError` du provider
+  `claude-cli`) n'etait pas interceptee et remontait comme un traceback brut au lieu
+  d'un message d'erreur propre.
+
 ## [1.0.0] - 2026-08-07
 
 Premiere version numerotee. Etablit le schema de version ci-dessus ; les deux entrees

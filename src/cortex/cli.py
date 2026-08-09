@@ -174,9 +174,11 @@ def build(
             on_progress=console.print,
             on_note_progress=on_note_progress,
         )
-    except (ValueError, graphify_bridge.GraphifyError) as exc:
+    except (ValueError, RuntimeError, graphify_bridge.GraphifyError) as exc:
         stop_progress()
         console.print(f"[red]Erreur :[/red] {exc}")
+        console.print("[yellow]La progression realisee avant l'erreur a ete sauvegardee dans le cache -- "
+                       "relance la meme commande pour reprendre la ou ca s'est arrete.[/yellow]")
         raise typer.Exit(code=1) from exc
 
     if dry_run:
@@ -262,9 +264,11 @@ def vault(
             on_progress=console.print,
             on_note_progress=on_note_progress,
         )
-    except ValueError as exc:
+    except (ValueError, RuntimeError) as exc:
         stop_progress()
         console.print(f"[red]Erreur :[/red] {exc}")
+        console.print("[yellow]La progression realisee avant l'erreur a ete sauvegardee dans le cache -- "
+                       "relance la meme commande pour reprendre la ou ca s'est arrete.[/yellow]")
         raise typer.Exit(code=1) from exc
     console.print(f"[bold green]Vault genere :[/bold green] {result.vault_dir} ({len(result.notes)} notes)")
 

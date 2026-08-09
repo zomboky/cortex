@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 import cortex.pipeline as pipeline_module
 from cortex.config import CortexConfig
 from cortex.providers.base import LLMProvider
@@ -20,6 +22,23 @@ class _FakeVaultProvider(LLMProvider):
         self.calls += 1
         if not self._responses:
             raise AssertionError("appel LLM inattendu -- aucun changement ne le justifiait")
+        return self._responses.pop(0)
+
+
+class _CrashingVaultProvider(LLMProvider):
+    """Repond normalement pour les N premiers appels puis leve RuntimeError -- simule un
+    crash en cours de route (ex. le provider claude-cli qui epuise ses retries apres
+    avoir tape la limite d'usage Claude)."""
+
+    def __init__(self, responses: list[str], crash_after: int) -> None:
+        self._responses = list(responses)
+        self._crash_after = crash_after
+        self.calls = 0
+
+    def complete(self, prompt: str, *, system=None, max_tokens: int = 4096) -> str:
+        self.calls += 1
+        if self.calls > self._crash_after:
+            raise RuntimeError("claude CLI a echoue apres 4 tentatives : limite d'usage atteinte")
         return self._responses.pop(0)
 
 
@@ -117,6 +136,35 @@ def test_modifying_one_file_only_regenerates_that_note(monkeypatch, tmp_path: Pa
     titles = {n.title for n in result2.notes}
     assert titles == {"A", "B v2"}
     assert graphify_calls["count"] == 2  # le vault a change -> graphify relance
+
+
+def test_crash_mid_build_persists_already_generated_notes_to_cache(monkeypatch, tmp_path: Path) -> None:
+    source = _make_source(tmp_path)
+    output = tmp_path / "out"
+
+    provider1 = _CrashingVaultProvider([_draft_response("A")], crash_after=1)
+    _patch_providers(monkeypatch, provider1)
+    _patch_graphify(monkeypatch)
+
+    with pytest.raises(RuntimeError):
+        pipeline_module.build(source, output, CortexConfig())
+
+    # Meme si le build a plante avant la fin (ici en generant la note de b.md), la note
+    # deja generee avec succes (a.md) doit avoir ete persistee sur disque -- pas
+    # seulement gardee en memoire jusqu'a la fin du build.
+    cache_path = output / ".cortex" / "vault-cache.json"
+    assert cache_path.is_file()
+    cache_data = json.loads(cache_path.read_text(encoding="utf-8"))
+    assert any(entry["title"] == "A" for entry in cache_data.values())
+
+    # Relancer le build ne doit pas regenerer A (deja en cache), seulement B.
+    provider2 = _FakeVaultProvider([_draft_response("B"), _links_response()])
+    _patch_providers(monkeypatch, provider2)
+    result2 = pipeline_module.build(source, output, CortexConfig())
+
+    assert provider2.calls == 2  # 1 seul brouillon (B, pas A) + la passe de liens
+    titles = {n.title for n in result2.notes}
+    assert titles == {"A", "B"}
 
 
 def test_new_file_added_triggers_regeneration_for_new_file_only(monkeypatch, tmp_path: Path) -> None:
