@@ -18,7 +18,6 @@ from .triage import pipeline as triage_pipeline
 
 app = typer.Typer(
     add_completion=False,
-    no_args_is_help=True,
     help="Trie un dossier de fichiers, en fait un vault Obsidian curé par un LLM, puis "
     "construit un graphe de connaissances interrogeable avec Graphify.",
 )
@@ -94,8 +93,8 @@ def _maybe_auto_update() -> None:
     )
 
 
-@app.callback()
-def main(
+@app.callback(invoke_without_command=True)
+def cortex_main(
     ctx: typer.Context,
     version: Optional[bool] = typer.Option(
         None, "--version", callback=_version_callback, is_eager=True, help="Affiche la version et quitte."
@@ -103,6 +102,11 @@ def main(
 ) -> None:
     if ctx.invoked_subcommand != "update":
         _maybe_auto_update()
+    if ctx.invoked_subcommand is None:
+        from .repl import run_repl
+
+        run_repl(_build_config(None, None, None, None, None, None), console=console)
+        raise typer.Exit()
 
 
 def _build_config(
@@ -131,6 +135,18 @@ def _build_config(
     except ValueError as exc:
         console.print(f"[red]Erreur de configuration :[/red] {exc}")
         raise typer.Exit(code=1) from exc
+
+
+def _print_config(console: Console, config: CortexConfig) -> None:
+    console.print(f"provider      = {config.provider}")
+    console.print(f"api_key       = {'definie' if config.has_api_key() else 'absente'}")
+    console.print(f"base_url      = {config.base_url or '(non definie)'}")
+    console.print(f"triage_model  = {config.triage_model or '(non definie)'}")
+    console.print(f"vault_model   = {config.vault_model or '(non definie)'}")
+    console.print(f"triage_effort = {config.triage_effort or '(defaut API)'}")
+    console.print(f"vault_effort  = {config.vault_effort or '(defaut API)'}")
+    console.print(f"batch_size    = {config.batch_size}")
+    console.print(f"config file   = {config_file_path()}")
 
 
 def _note_progress_reporter(console: Console):
@@ -378,15 +394,7 @@ def config_show(
         provider, model, triage_model, vault_model, base_url, batch_size,
         effort=effort, triage_effort=triage_effort, vault_effort=vault_effort,
     )
-    console.print(f"provider      = {config.provider}")
-    console.print(f"api_key       = {'definie' if config.has_api_key() else 'absente'}")
-    console.print(f"base_url      = {config.base_url or '(non definie)'}")
-    console.print(f"triage_model  = {config.triage_model or '(non definie)'}")
-    console.print(f"vault_model   = {config.vault_model or '(non definie)'}")
-    console.print(f"triage_effort = {config.triage_effort or '(defaut API)'}")
-    console.print(f"vault_effort  = {config.vault_effort or '(defaut API)'}")
-    console.print(f"batch_size    = {config.batch_size}")
-    console.print(f"config file   = {config_file_path()}")
+    _print_config(console, config)
 
 
 @config_app.command("init")

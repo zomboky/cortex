@@ -94,3 +94,29 @@ def test_expand_exclude_argv_handles_trailing_exclude_with_no_values() -> None:
 
     assert _expand_exclude_argv(argv) == argv
 
+
+def test_bare_invocation_launches_repl(monkeypatch) -> None:
+    called = {}
+
+    def fake_run_repl(config, *, console=None):
+        called["config"] = config
+
+    monkeypatch.setattr("cortex.repl.run_repl", fake_run_repl)
+    result = runner.invoke(app, [])
+
+    assert result.exit_code == 0
+    assert "config" in called
+
+
+def test_subcommand_does_not_launch_repl(monkeypatch) -> None:
+    called = {}
+
+    def fake_run_repl(config, *, console=None):
+        called["config"] = config
+
+    monkeypatch.setattr("cortex.repl.run_repl", fake_run_repl)
+    result = runner.invoke(app, ["config", "show"])
+
+    assert result.exit_code == 0
+    assert "config" not in called
+

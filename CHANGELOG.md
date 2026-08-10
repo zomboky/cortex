@@ -18,6 +18,31 @@ tenu en phase avec `pyproject.toml`) est independante du mecanisme de mise a jou
 date ». Le numero de version documente ici sert a communiquer l'ampleur d'un
 changement, pas a piloter l'installation.
 
+## [1.2.0] - 2026-08-10
+
+### Ajoute
+- `cortex` lance desormais une session interactive (REPL) quand il est invoque sans
+  sous-commande, a la maniere de `claude` : banniere ASCII, invite `cortex>`, et
+  acces direct aux commandes existantes (`build`, `triage`, `vault`, `graph`,
+  `query`, `update`) depuis la session, sans avoir a retaper `cortex` a chaque ligne.
+- Nouvelles commandes slash a l'interieur de la session : `/provider`, `/model`,
+  `/effort` (menus interactifs a fleches, via la nouvelle dependance
+  `questionary`) pour changer respectivement le provider LLM, le(s) modele(s) et
+  le niveau d'effort de raisonnement sans relancer `cortex` ; `/exclude` pour
+  gerer les motifs d'exclusion par defaut de la session ; `/config` pour afficher
+  la configuration resolue de la session en cours ; `/clear`, `/help`,
+  `/exit`/`/quit`.
+- Les reglages choisis via ces menus ne s'appliquent qu'a la session REPL en
+  cours (ils ne sont pas ecrits dans `config.toml`) ; ils sont prioritaires sur
+  les variables d'environnement et le fichier de config pour les commandes
+  lancees depuis cette session -- exactement comme un flag `--provider` /
+  `--model` / `--effort` passe en ligne de commande.
+
+### Modifie
+- Invoquer `cortex` sans arguments n'affiche plus l'aide (`cortex --help` reste
+  le moyen documente d'obtenir l'aide) : ce comportement est remplace par le
+  lancement de la session interactive decrite ci-dessus.
+
 ## [1.1.1] - 2026-08-10
 
 ### Ajoute
