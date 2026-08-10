@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typer.testing import CliRunner
 
-from cortex.cli import app
+from cortex.cli import _expand_exclude_argv, app
 
 runner = CliRunner()
 
@@ -61,4 +61,36 @@ def test_triage_without_api_key_degrades_gracefully_instead_of_crashing(monkeypa
 
     assert result.exit_code == 0
     assert "note.md" in result.stdout
+
+
+def test_expand_exclude_argv_splits_space_separated_values() -> None:
+    argv = ["cortex", "build", ".", "--exclude", ".gitignore", "dataset.csv", "instructions", "instructions.md"]
+
+    assert _expand_exclude_argv(argv) == [
+        "cortex", "build", ".",
+        "--exclude", ".gitignore",
+        "--exclude", "dataset.csv",
+        "--exclude", "instructions",
+        "--exclude", "instructions.md",
+    ]
+
+
+def test_expand_exclude_argv_stops_at_next_flag() -> None:
+    argv = ["build", ".", "--exclude", "data", "*.csv", "--dry-run"]
+
+    assert _expand_exclude_argv(argv) == [
+        "build", ".", "--exclude", "data", "--exclude", "*.csv", "--dry-run",
+    ]
+
+
+def test_expand_exclude_argv_leaves_repeated_flag_form_unchanged() -> None:
+    argv = ["build", ".", "--exclude", "data", "--exclude", "*.csv"]
+
+    assert _expand_exclude_argv(argv) == argv
+
+
+def test_expand_exclude_argv_handles_trailing_exclude_with_no_values() -> None:
+    argv = ["build", ".", "--exclude"]
+
+    assert _expand_exclude_argv(argv) == argv
 

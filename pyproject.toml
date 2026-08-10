@@ -1,6 +1,6 @@
 [project]
 name = "cortex"
-version = "1.1.0"
+version = "1.1.1"
 description = "Trie un dossier de fichiers, en fait un vault Obsidian curé par un LLM, puis construit un graphe de connaissances interrogeable avec Graphify."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -22,7 +22,7 @@ dev = [
 ]
 
 [project.scripts]
-cortex = "cortex.cli:app"
+cortex = "cortex.cli:main"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

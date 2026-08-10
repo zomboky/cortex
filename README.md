@@ -131,9 +131,11 @@ a full rebuild from scratch.
 runs - no heuristic, no LLM call, not even a hash computed. A value matches either an exact path
 component anywhere under the source folder (`--exclude data` drops the whole `data/` subtree,
 wherever it sits) or a glob against the relative path or filename (`--exclude "*.csv"`,
-`--exclude "secrets/*.json"`). Repeat the flag for multiple patterns:
+`--exclude "secrets/*.json"`). Pass multiple patterns space-separated after a single `--exclude`,
+or repeat the flag - both are equivalent and can be mixed:
 
 ```
+cortex build . --exclude data google-earth-engine-api-key "*.csv"
 cortex build . --exclude data --exclude google-earth-engine-api-key --exclude "*.csv"
 ```
 
@@ -141,6 +143,10 @@ Use this for anything that shouldn't be read by the LLM at all - credentials, se
 keys, large raw datasets that aren't "knowledge" in the vault sense. Cortex has no `.gitignore`
 awareness, so a secrets folder that's merely `.gitignore`d is **not** excluded by default; pass
 `--exclude` explicitly.
+
+The space-separated form greedily grabs every following token that isn't itself a flag, so put
+the source folder (or any other positional argument) *before* `--exclude`, not after - otherwise
+it gets swallowed as one more excluded pattern.
 
 ## Reasoning effort
 

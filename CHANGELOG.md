@@ -18,6 +18,14 @@ tenu en phase avec `pyproject.toml`) est independante du mecanisme de mise a jou
 date ». Le numero de version documente ici sert a communiquer l'ampleur d'un
 changement, pas a piloter l'installation.
 
+## [1.1.1] - 2026-08-10
+
+### Ajoute
+- `--exclude` accepte desormais plusieurs valeurs separees par des espaces en une
+  seule occurrence de la flag (ex. `--exclude .gitignore dataset.csv instructions
+  instructions.md`), en plus de la syntaxe repetee existante (`--exclude a --exclude
+  b`). Les deux formes sont equivalentes et peuvent etre melangees.
+
 ## [1.1.0] - 2026-08-09
 
 ### Corrige

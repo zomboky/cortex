@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -39,8 +40,33 @@ BaseUrlOpt = typer.Option(None, "--base-url", help="URL de l'endpoint compatible
 BatchSizeOpt = typer.Option(None, "--batch-size", help="Taille des lots pour les appels LLM du triage.")
 ExcludeOpt = typer.Option(
     None, "--exclude",
-    help="Nom de fichier/dossier ou motif glob a exclure du scan (ex. --exclude data --exclude \"*.csv\"). Repetable.",
+    help="Nom(s) de fichier/dossier ou motif(s) glob a exclure du scan, separes par des espaces "
+    "(ex. --exclude data \"*.csv\" secrets.json). Repetable.",
 )
+
+
+def _expand_exclude_argv(argv: list[str]) -> list[str]:
+    """Autorise `--exclude a b c` (valeurs separees par des espaces) en plus de la
+    syntaxe repetee `--exclude a --exclude b`. Reecrit la premiere forme vers la
+    seconde avant que Click/Typer ne parse les arguments, en consommant tous les
+    tokens suivant --exclude qui ne commencent pas par un tiret."""
+    result: list[str] = []
+    i = 0
+    n = len(argv)
+    while i < n:
+        token = argv[i]
+        result.append(token)
+        i += 1
+        if token != "--exclude":
+            continue
+        first = True
+        while i < n and not argv[i].startswith("-"):
+            if not first:
+                result.append("--exclude")
+            result.append(argv[i])
+            first = False
+            i += 1
+    return result
 
 
 def _version_callback(value: bool) -> None:
@@ -370,5 +396,10 @@ def config_init() -> None:
     console.print(f"[bold green]Config ecrite :[/bold green] {path}")
 
 
-if __name__ == "__main__":
+def main() -> None:
+    sys.argv = _expand_exclude_argv(sys.argv)
     app()
+
+
+if __name__ == "__main__":
+    main()
