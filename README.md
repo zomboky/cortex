@@ -49,6 +49,23 @@ The script installs cortex globally with `uv tool install` (falling back to `pip
    cortex --version
    ```
 
+## Interactive session
+
+Running `cortex` with no arguments launches an interactive session instead of printing help, the same way `claude` does: an ASCII banner, a `cortex>` prompt, and every pipeline command available without retyping `cortex` each time.
+
+![cortex launched with no arguments: the CORTEX banner and the cortex> prompt](screenshots/repl-banner.png)
+
+From inside the session:
+
+- Run pipeline commands directly -- `build ~/notes`, `triage .`, `vault .`, `graph cortex-out/vault`, `query "..."`, `update` -- without the leading `cortex`.
+- `/provider [name]`, `/model [triage|vault|both] [name]`, `/effort [triage|vault|both] [level]` change the LLM provider, model(s), and reasoning effort for the rest of the session, via an interactive arrow-key menu when called with no argument, or directly inline (`/provider claude-cli`) -- the inline form also works over a non-interactive terminal (CI, piped input), where the menu can't render.
+- `/exclude add|remove|list|clear <patterns...>` manages a set of default exclusions applied to every `build`/`triage`/`vault` run for the rest of the session, on top of any `--exclude` passed on the line itself.
+- `/config` shows the session's currently resolved configuration; `/clear` redraws the banner; `/help` lists every command; `/exit` (or `/quit`, or Ctrl+D) leaves the session -- Ctrl+C just cancels the current line.
+
+![/provider, /model and /effort changing the session's configuration, then a build --dry-run picking it up](screenshots/repl-commands.png)
+
+Settings changed this way are session-only -- they're never written to `config.toml` -- but take priority over environment variables and the config file for every command run from inside that session, exactly like passing `--provider`/`--model`/`--effort` on the command line would.
+
 ## Configuration
 
 Cortex and Graphify have completely independent LLM configuration - Graphify only ever reads `GEMINI_API_KEY`/`GOOGLE_API_KEY`, never the variables below.
