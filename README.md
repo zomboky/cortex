@@ -2,22 +2,11 @@
 
 Turns a folder of files into a curated, richly-linked Obsidian vault, then builds a queryable knowledge graph with [Graphify](https://github.com/Graphify-Labs/graphify).
 
-```
-$ cortex build ~/Documents/loose-notes
-
-Triage: 142 files -> 89 kept, 53 dropped (51 by heuristic, 2 by LLM)
-Vault generated: 89 notes in cortex-out/vault/
-Building the graph (graphify)...
-Graph complete: cortex-out/vault/graphify-out/
-  graph.html      - interactive graph, open in a browser
-  GRAPH_REPORT.md - audit report
-  graph.json      - raw graph data
-
-$ cortex query "which notes talk about the infrastructure budget?"
-...
-```
+![cortex build, then query the resulting graph](screenshots/overview.png)
 
 ## What cortex does
+
+![Triage -> Vault generation -> Graph build](screenshots/pipeline.png)
 
 - **Triage** - walks the input folder, drops obvious noise for free (build artifacts, lockfiles, oversized low-information data dumps) with a cheap heuristic pass, then asks an LLM to judge only the genuinely ambiguous files. Nothing gets silently dropped on an LLM failure - it defaults to keeping the file.
 - **Vault generation** - for every file kept, an LLM writes a curated Obsidian-style note (summary, tags, cleaned-up body) and proposes real `[[wikilinks]]` between notes, written as explicit prose sentences rather than bare bracketed lists. A deterministic pass then guarantees zero dangling links in the final vault.
@@ -126,6 +115,8 @@ semantic extraction included). `.cortex/` is specific to one `--output` director
 a full rebuild from scratch.
 
 ## Excluding paths
+
+![--exclude dropping a folder, a file, and a glob before triage runs](screenshots/exclude.png)
 
 `--exclude` (repeatable) on `build`/`vault`/`triage` drops a path from the scan before triage even
 runs - no heuristic, no LLM call, not even a hash computed. A value matches either an exact path
