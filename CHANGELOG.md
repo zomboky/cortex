@@ -18,6 +18,22 @@ tenu en phase avec `pyproject.toml`) est independante du mecanisme de mise a jou
 date ». Le numero de version documente ici sert a communiquer l'ampleur d'un
 changement, pas a piloter l'installation.
 
+## [2.0.0] - 2026-08-21
+
+### Modifie
+- Plafonds `max_tokens` releves pour tous les appels LLM du pipeline : 2048 -> 8192
+  pour le triage (`triage/llm_judge.py`), 4096 -> 8192 pour la generation de note et
+  la passe de liaison (`vault/generator.py`). Necessaire pour les providers
+  `openai-compatible` pointant vers un modele "raisonneur" local (ex. Qwen3 via
+  llama.cpp) : le raisonnement interne du modele consomme le meme budget de tokens
+  que la reponse finale, et l'ancien plafond risquait de tronquer la reponse avant
+  le JSON attendu -- un lot de triage entier retombait alors silencieusement sur
+  "keep" par defaut, ou une note generee retombait sur le contenu brut du fichier
+  source au lieu d'une note curee. Change reellement ce qui est execute/produit a
+  chaque `build`/`triage`/`vault` pour ces providers, d'ou le major : cout et
+  latence par appel plus eleves (sans effet sur `anthropic`/`claude-cli`, ou ce
+  plafond n'est qu'un plafond jamais atteint en pratique).
+
 ## [1.2.0] - 2026-08-10
 
 ### Ajoute

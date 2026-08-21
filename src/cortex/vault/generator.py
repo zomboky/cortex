@@ -60,7 +60,7 @@ def _parse_json(raw: str) -> dict:
 
 def generate_draft(provider: LLMProvider, source_path: Path, content: str) -> Note:
     prompt = f"Fichier source : {source_path}\n\n```\n{content}\n```"
-    raw = provider.complete(prompt, system=NOTE_SYSTEM_PROMPT, max_tokens=4096)
+    raw = provider.complete(prompt, system=NOTE_SYSTEM_PROMPT, max_tokens=8192)
     data = _parse_json(raw)
     return Note(
         title=str(data.get("title") or source_path.stem).strip() or source_path.stem,
@@ -81,7 +81,7 @@ def propose_links(provider: LLMProvider, notes: list[Note]) -> dict[str, list[st
         {"title": n.title, "summary": n.summary, "candidate_topics": n.candidate_topics} for n in notes
     ]
     prompt = "Notes du vault :\n" + json.dumps(catalog, ensure_ascii=False, indent=2)
-    raw = provider.complete(prompt, system=LINKING_SYSTEM_PROMPT, max_tokens=4096)
+    raw = provider.complete(prompt, system=LINKING_SYSTEM_PROMPT, max_tokens=8192)
     data = _parse_json(raw)
     links_raw = data.get("links", []) if isinstance(data, dict) else []
 

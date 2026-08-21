@@ -47,7 +47,12 @@ def test_config_init_writes_starter_file(monkeypatch, tmp_path) -> None:
     assert "config.toml" in result.stdout
 
 
-def test_openai_compatible_without_model_fails_cleanly() -> None:
+def test_openai_compatible_without_model_fails_cleanly(monkeypatch, tmp_path) -> None:
+    # Isole du config.toml reel de la machine (ex. un provider openai-compatible deja
+    # configure avec un modele) -- sinon ce test depend de l'etat local de la machine
+    # executant la suite plutot que du seul argument --provider passe ici.
+    monkeypatch.setattr("cortex.config.config_file_path", lambda: tmp_path / "absent-config.toml")
+
     result = runner.invoke(app, ["config", "show", "--provider", "openai-compatible"])
     assert result.exit_code == 1
 

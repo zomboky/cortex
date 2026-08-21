@@ -86,5 +86,9 @@ def judge_batch(provider: LLMProvider, paths: list[Path]) -> list[JudgeVerdict]:
     if not paths:
         return []
     prompt = build_batch_prompt(paths)
-    raw = provider.complete(prompt, system=SYSTEM_PROMPT, max_tokens=2048)
+    # Genereux (pas juste "assez pour du JSON court") : certains providers (ex. Qwen3 en
+    # local via openai-compatible) emettent un raisonnement interne qui compte contre ce
+    # meme budget avant le JSON final -- un plafond trop bas tronque la reponse et fait
+    # tomber tout le lot sur le defaut "keep" (voir parse_verdicts), pas juste ce fichier.
+    raw = provider.complete(prompt, system=SYSTEM_PROMPT, max_tokens=8192)
     return parse_verdicts(raw, paths)
