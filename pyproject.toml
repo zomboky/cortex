@@ -1,6 +1,6 @@
 [project]
 name = "cortex"
-version = "2.0.0"
+version = "2.0.1"
 description = "Trie un dossier de fichiers, en fait un vault Obsidian curé par un LLM, puis construit un graphe de connaissances interrogeable avec Graphify."
 readme = "README.md"
 requires-python = ">=3.10"

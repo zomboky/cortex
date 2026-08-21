@@ -27,7 +27,7 @@ def test_render_banner_contains_expected_segments() -> None:
     console = _console()
     console.print(render_banner())
     text = console.export_text()
-    assert "2.0.0" in text
+    assert "2.0.1" in text
     assert "session interactive" in text
 
 

@@ -13,7 +13,11 @@ class OpenAICompatibleProvider(LLMProvider):
         # sur /v1/chat/completions.
         import openai
 
-        self._client = openai.OpenAI(api_key=api_key or "not-needed", base_url=base_url)
+        # Timeout par defaut du SDK openai (600s) trop court pour un modele local
+        # (ex. Qwen via llama.cpp) sous charge -- generation bien plus lente qu'une
+        # API cloud, et un serveur partage avec d'autres requetes concurrentes peut
+        # faire depasser 10 minutes une seule reponse. 1h de marge.
+        self._client = openai.OpenAI(api_key=api_key or "not-needed", base_url=base_url, timeout=3600.0)
         self.model = model
 
     def complete(self, prompt: str, *, system: str | None = None, max_tokens: int = 4096) -> str:

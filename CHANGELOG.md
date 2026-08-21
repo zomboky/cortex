@@ -18,6 +18,20 @@ tenu en phase avec `pyproject.toml`) est independante du mecanisme de mise a jou
 date ». Le numero de version documente ici sert a communiquer l'ampleur d'un
 changement, pas a piloter l'installation.
 
+## [2.0.1] - 2026-08-21
+
+### Corrige
+- Provider `openai-compatible` : le client `openai` n'avait pas de timeout explicite,
+  donc son defaut (600s/requete) s'appliquait. Un modele local (ex. Qwen via
+  llama.cpp) est bien plus lent qu'une API cloud, et un serveur partage avec
+  d'autres requetes concurrentes peut faire depasser 10 minutes une seule reponse
+  -- `cortex build` plantait alors en plein milieu d'un run avec un `ReadTimeout`
+  brut. Timeout releve a 1h. Le cache incremental ayant deja persiste les notes
+  generees avant le crash (voir `pipeline.py`), un run interrompu ainsi n'avait
+  de toute facon rien perdu -- relancer la meme commande reprenait ou ca s'etait
+  arrete, mais sans ce correctif ca finissait quand meme par planter a nouveau
+  sur le meme type de requete lente.
+
 ## [2.0.0] - 2026-08-21
 
 ### Modifie
